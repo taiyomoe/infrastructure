@@ -1,0 +1,101 @@
+- name: Setup nodes
+  hosts: nodes
+  become: true
+  tasks:
+    - name: Set facts
+      ansible.builtin.set_fact:
+        new_root_password: "{{ lookup('password', '/dev/null length=16') }}"
+        new_user: "{{ lookup('password', '/dev/null length=16') | regex_replace('[^a-zA-Z0-9_-]', '') }}"
+        new_user_password: "{{ lookup('password', '/dev/null length=16') }}"
+        new_ssh_port: '{{ 65535 | random(start=1025) }}'
+
+    - name: Update & upgrade packages
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+
+    - name: Set new root password
+      ansible.builtin.user:
+        name: root
+        password: "{{ new_root_password | password_hash('sha512') }}"
+
+    - name: Create a new user
+      ansible.builtin.user:
+        name: '{{ new_user }}'
+        password: "{{ new_user_password | password_hash('sha512') }}"
+        shell: /bin/bash
+
+    - name: Ensure .ssh directory exists for the new user
+      ansible.builtin.file:
+        path: '/home/{{ random_user }}/.ssh'
+        state: directory
+        mode: '0700'
+        owner: '{{ random_user }}'
+        group: '{{ random_user }}'
+
+    - name: Copy authorized_keys from root to new user
+      ansible.builtin.copy:
+        src: /root/.ssh/authorized_keys
+        dest: '/home/{{ random_user }}/.ssh/authorized_keys'
+        owner: '{{ random_user }}'
+        group: '{{ random_user }}'
+        mode: '0600'
+      when: ansible_stat.exists
+
+    - name: Remove authorized_keys from /root/.ssh
+      ansible.builtin.file:
+        path: /root/.ssh/authorized_keys
+        state: absent
+      when: ansible_stat.exists
+
+    - name: Disable root SSH access
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify:
+        - Restart SSH
+
+    - name: Change SSH port
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#Port'
+        line: 'Port {{ new_ssh_port }}'
+      notify:
+        - Restart SSH
+
+    - name: Enable UFW firewall
+      community.general.ufw:
+        state: enabled
+
+    - name: Allow SSH access
+      community.general.ufw:
+        rule: allow
+        port: '{{ new_ssh_port }}'
+
+    - name: Set default deny incoming policy
+      community.general.ufw:
+        direction: incoming
+        policy: deny
+
+    - name: Set default allow outgoing policy
+      community.general.ufw:
+        direction: outgoing
+        policy: allow
+
+    - name: Report new credentials
+      vars:
+        msg: |
+          Host: {{ inventory_hostname }}
+          New root password: {{ new_root_password }}
+          New user: {{ new_user }}
+          New user password: {{ new_user_password }}
+          SSH Port: {{ new_ssh_port }}
+      ansible.builtin.debug:
+        msg: "{{ msg.split('\n') }}"
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.service:
+        name: sshd
+        state: restarted

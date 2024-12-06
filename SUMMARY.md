@@ -1,3 +1,4 @@
 # Table of contents
 
-* [Page](README.md)
+* [Infrastructure](README.md)
+  * [Server onboarding](infrastructure/server-onboarding.md)
