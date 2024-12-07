@@ -1,6 +1,6 @@
 # Infrastructure
 
-This repository is mainly edited using GitBook's GitHub integration and sync feature. This describes our current infrastructure and provides some automation scripts for server onboarding.
+This repository describes our current infrastructure situation and provides some automation scripts for various tasks.
 
 ## Overview
 
