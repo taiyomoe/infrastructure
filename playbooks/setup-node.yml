@@ -4,9 +4,9 @@
   tasks:
     - name: Set facts
       ansible.builtin.set_fact:
-        new_root_password: "{{ lookup('password', '/dev/null length=16') }}"
-        new_user: "{{ lookup('password', '/dev/null length=16') | regex_replace('[^a-zA-Z0-9_-]', '') }}"
-        new_user_password: "{{ lookup('password', '/dev/null length=16') }}"
+        new_root_password: "{{ lookup('password', '/dev/null length=32') }}"
+        new_user: "{{ lookup('password', '/dev/null length=32') | regex_replace('[^a-zA-Z0-9_-]', '') }}"
+        new_user_password: "{{ lookup('password', '/dev/null length=32') }}"
         new_ssh_port: '{{ 65535 | random(start=1025) }}'
 
     - name: Update & upgrade packages
@@ -27,26 +27,25 @@
 
     - name: Ensure .ssh directory exists for the new user
       ansible.builtin.file:
-        path: '/home/{{ random_user }}/.ssh'
+        path: '/home/{{ new_user }}/.ssh'
         state: directory
         mode: '0700'
-        owner: '{{ random_user }}'
-        group: '{{ random_user }}'
+        owner: '{{ new_user }}'
+        group: '{{ new_user }}'
 
     - name: Copy authorized_keys from root to new user
       ansible.builtin.copy:
+        remote_src: true
         src: /root/.ssh/authorized_keys
-        dest: '/home/{{ random_user }}/.ssh/authorized_keys'
-        owner: '{{ random_user }}'
-        group: '{{ random_user }}'
+        dest: '/home/{{ new_user }}/.ssh/authorized_keys'
+        owner: '{{ new_user }}'
+        group: '{{ new_user }}'
         mode: '0600'
-      when: ansible_stat.exists
 
     - name: Remove authorized_keys from /root/.ssh
       ansible.builtin.file:
         path: /root/.ssh/authorized_keys
         state: absent
-      when: ansible_stat.exists
 
     - name: Disable root SSH access
       ansible.builtin.lineinfile:
