@@ -4,26 +4,34 @@ Currently, we have a few servers. Every time we want to integrate a new one into
 
 ## Steps
 
+### Preparing your environment
+
+First of all, you'll need to install Ansible and the community modules.
+
+```bash
+# Install pipx
+brew install pipx
+pipx ensurepath
+sudo pipx ensurepath --global # optional to allow pipx actions with --global argument
+
+# Install Ansible
+pipx install --include-deps ansible
+
+# Install ansible-dev-tools if you plan on developing Ansible modules
+pipx inject ansible ansible-dev-tools
+
+# Install passlib
+pipx inject ansible passlib
+```
+
+If you installed `ansible-dev-tools`, you'll have to make sure to select the correct Python interpreter on VSCode. It is typically located at `~/.local/pipx/venvs/ansible/bin/python3`.
+
 ### Preparing the servers
 
 First of all, you should upload your SSH Public Key to every new server. You can do that with the following command:
 
 ```bash
 ssh-copy-id -i ~/.ssh/id_rsa.pub USERNAME@IP_ADDRESS
-```
-
-### Installing Ansible and dependencies
-
-We're using Ansible to automate the setup of our servers. After installing it, you'll have have to also install the community modules:
-
-```bash
-ansible-galaxy collection install community.general
-```
-
-You might also need to install `passlib`:
-
-```bash
-pip install --break-system-packages passlib
 ```
 
 ### Creating the inventory file
