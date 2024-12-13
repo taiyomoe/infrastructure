@@ -1,2 +1,5 @@
+# VSCode
+.vscode/*
+
 # Ansible
 inventory.ini
